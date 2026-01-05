@@ -1,55 +1,43 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-import re
 
 app = FastAPI()
 
-# ---- Request schema (what the API expects) ----
 class CallRequest(BaseModel):
     phone_number: str
     text: str
 
-# ---- Spam rules ----
-SPAM_KEYWORDS = [
-    "extended warranty",
-    "press 1",
-    "act now",
-    "final notice",
-    "limited time",
-    "free offer",
-    "congratulations",
-    "urgent",
-    "win money"
-]
-
-# ---- Core logic ----
-def classify_text(text: str):
-    text_lower = text.lower()
-    hits = [kw for kw in SPAM_KEYWORDS if kw in text_lower]
-
-    if len(hits) >= 2:
-        return "spam", hits
-    elif len(hits) == 1:
-        return "likely_spam", hits
-    else:
-        return "likely_safe", []
-
-# ---- Routes ----
 @app.get("/")
 def home():
-    return {"status": "AI Call Blocker backend running"}
-
-@app.post("/classify")
-def classify_call(data: CallRequest):
-    classification, hits = classify_text(data.text)
-
-    return {
-        "phone_number": data.phone_number,
-        "classification": classification,
-        "matched_keywords": hits,
-        "confidence": round(min(len(hits) * 0.4 + 0.2, 0.95), 2)
-    }
+    return {"status": "AI Call Blocker backend"}
 
 @app.get("/health")
 def health():
     return {"ok": True}
+
+@app.post("/classify")
+def classify_call(data: CallRequest):
+    text = data.text.lower()
+
+    spam_keywords = [
+        "final notice",
+        "extended warranty",
+        "act now",
+        "urgent",
+        "limited time",
+        "press 1",
+        "verify your account"
+    ]
+
+    if any(word in text for word in spam_keywords):
+        classification = "likely_spam"
+        reason = "Common spam indicators detected"
+    else:
+        classification = "likely_safe"
+        reason = "No spam indicators detected"
+
+    return {
+        "phone_number": data.phone_number,
+        "classification": classification,
+        "reason": reason
+    }
